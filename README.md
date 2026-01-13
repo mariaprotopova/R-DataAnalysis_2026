@@ -1,6 +1,8 @@
 # R-DataAnalysis_2026
 Репозиторий по курсу Анализ данных в R (ФиКЛ НИУ ВШЭ, 2026)
 
+[Ведомость.](https://docs.google.com/spreadsheets/d/1McTtwNtk0vQQA4L28mLQJ2msERFSkMKT/edit?usp=sharing&ouid=117855841438264908770&rtpof=true&sd=true)
+
 ## Формула оценки за курс
 
 60% -- средняя оценка по домашним заданиям
