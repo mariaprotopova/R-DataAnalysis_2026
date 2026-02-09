@@ -3,7 +3,7 @@
 
 [Ведомость.](https://docs.google.com/spreadsheets/d/1McTtwNtk0vQQA4L28mLQJ2msERFSkMKT/edit?usp=sharing&ouid=117855841438264908770&rtpof=true&sd=true)
 
-[Таблица с выбором датасетов для финального проекта](https://docs.google.com/spreadsheets/d/1QOGY9OmLCrpAt7Pn4bip9eCL0erXP6zccKyCp8LxWb0/edit?usp=sharing)
+**NB!** [Таблица с выбором датасетов для финального проекта](https://docs.google.com/spreadsheets/d/1QOGY9OmLCrpAt7Pn4bip9eCL0erXP6zccKyCp8LxWb0/edit?usp=sharing)
 
 ## Формула оценки за курс
 
