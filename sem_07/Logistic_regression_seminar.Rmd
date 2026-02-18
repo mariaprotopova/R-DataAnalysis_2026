@@ -1,0 +1,243 @@
+---
+title: "Logistic_regression"
+output: html_document
+date: "2025-01-15"
+---
+
+Loading libraries
+```{r}
+library(tidyverse)
+library(car)
+library(pROC) # install
+
+theme_set(theme_bw())
+```
+
+```{r}
+data <- readxl::read_excel('data/burnout.xlsx')
+
+str(data)
+# View(data)
+```
+
+```{r}
+colnames(data)
+
+data$burnout <- ifelse(data$burnout=='Burnt Out', 1, 0)
+model0 <- lm(burnout  ~ ., data)
+summary(model0)
+
+data %>%
+  mutate(
+    L = loc + cope + teaching + research + pastoral
+  ) %>%
+  ggplot(aes(L, burnout)) +
+  geom_point(size = 2, alpha = .3) +
+  geom_point(aes(y = model0$fitted.values),
+             color = 'darkred', alpha = 0.5) +
+  geom_smooth(method='lm')
+```
+
+What is happening to the y-axis?..
+
+### Let's define a *Generalized* Linear Model (do not confuse with *General* linear models -- we talked about them in the previous classes)
+
+Pay attention to the argument "family" -- we say that we want our model to assume that the data has a binomial distribution
+and ask it (the model) to use "logits"-transformation ("logit" linking function) to linearize our data
+
+```{r}
+model <- glm(burnout ~ ., data, family = binomial(link = 'logit'))
+```
+
+
+```{r}
+summary(model)
+```
+
+How to interpret these results?
+
+### Let's consider the deviance and significant of our model
+In order to assess significance of the model we need create a null-model and compare it's quality to our custom model
+
+Pay attention that in the previous class we used test='F', while here test='Chi'
+
+```{r}
+model_null <- glm(burnout ~ 1, data, family = binomial(link = 'logit'))
+anova(model_null, model, test = 'Chi')
+```
+Well done! our model is better that constant model!
+
+Can we make our model simpler and better?
+
+```{r}
+drop1(model, test='Chi')
+model2 <- update(model, . ~ . -degree)
+```
+
+
+```{r}
+AIC(model); AIC(model2)
+```
+
+```{r}
+anova(model, model2, test = 'Chi')
+```
+
+See if we can remove any other variable and check if it will not make the model worse
+```{r}
+# <your code goes here>
+drop1(model2, test='Chi')
+model3 <- update(model2, . ~ . -gender)
+anova(model2, model3)
+AIC(model3); AIC(model2)
+
+drop1(model3, test='Chi')
+model4 <- update(model3, . ~ . -research)
+anova(model3, model4)
+AIC(model3); AIC(model4)
+```
+
+Let's check model assumptions:::
+
+1. multicollinearity
+
+```{r}
+car::vif(model4)
+
+ggplot(data, aes(cope, teaching)) +
+  geom_point() +
+  geom_smooth(method='lm')
+```
+
+
+2. Distribution of residuals::
+
+```{r}
+logdiag <- tibble(fitted = fitted(model4, type = 'response'),
+                  resid = resid(model4, type = 'pearson'))
+
+logdiag %>% ggplot(aes(fitted, resid)) +
+  geom_point() +
+  geom_smooth(method='loess') +
+  geom_hline(yintercept = 0)
+
+```
+
+there definitely are some outliers
+
+
+3. "Heteroscedasticity"
+
+```{r}
+pchisq(sum(residuals(model4, type = "deviance")^2), model4$df.residual)
+
+```
+
+if the result of the test is > .05, then NO heteroscedasticity is in the model
+
+
+## How to interpret model coefficients?
+```{r}
+result <- summary(model4)
+coefs <- as.data.frame(result$coefficients)
+coefs$Odds_ratio <- exp(coefs$Estimate)
+coefs$`Pr(>|z|)` <- ifelse(coefs$`Pr(>|z|)` < .05, '*', '')
+
+coefs
+```
+
+**NB!** Pay attention to the Odds_ratio and p-value
+
+1) Intercept: in general (with all the other conditions being equal) a person is less likely to experience burnout (the odds is 4.86%)
+
+1) loc: if loc is increased by one unit, the odds of a person of experiencing burnout is increased by 11.26%
+
+2) cope: if cope is increased by one unit, the odds of a person of experiencing burnout is increased by 14.5%
+
+3) teaching: if teaching is increased by one unit, the odds of a person of experiencing burnout is *decreased* by 10.43%
+
+4) pastoral: if pastoral is increased by one unit, the odds of a person of experiencing burnout is increased by 4.47%
+
+## Model quality assessment
+
+P.S. print('hello, machine learning!')
+
+Divide sample into train and test
+```{r}
+set.seed(5432)
+ind_train <- sample(1:nrow(data), size = 0.8 * nrow(data), replace = FALSE)
+data %>% 
+  slice(ind_train) -> data_train
+data %>% 
+  slice(-ind_train) -> data_test
+```
+
+Use *train* dataset to fit your model (find the best coefficients),
+use *test* dataset to test your model's quality of classification
+
+```{r}
+str(data)
+model <- glm(burnout ~ ., data_train, family = binomial, contrasts=list(gender=contr.sum))
+summary(model)
+```
+
+```{r}
+predicted_train <- ifelse(predict(model, data_train, type = 'response') > 0.5, 1, 0)
+confmat <- table(data_train$burnout, predicted_train)
+
+```
+
+```{r}
+predicted_test <- ifelse(predict(model, data_test, type = 'response') > 0.5, 1, 0)
+cm <- table(data_test$burnout, predicted_test)
+```
+
+Let's create functions that will compute Accuracy, Precision, Recall and F1-score for us
+
+```{r}
+# <your code goes here>
+accuracy <- function(confusion_matrix){
+  return ((confusion_matrix[1,1] + confusion_matrix[2,2]) / sum(confusion_matrix))
+}
+
+precision <- function(confusion_matrix) {
+  return (confusion_matrix[2,2] / (confusion_matrix[1,2] + confusion_matrix[2,2]))
+}
+
+recall <- function(confusion_matrix) {
+  return (confusion_matrix[2,2] / (confusion_matrix[2,2] + confusion_matrix[2,1]))
+}
+
+f1_score <- function(confusion_matrix) {
+  prec <- precision(confusion_matrix)
+  rec <- recall(confusion_matrix)
+  return ((2 * prec * rec) / (prec + rec))
+}
+accuracy(cm)
+precision(cm)
+recall(cm)
+f1_score(cm)
+```
+
+
+```{r}
+tibble(data = c('train', 'test'),
+       accuracy = c(accuracy(confmat), accuracy(cm)),
+       precision = c(precision(confmat), precision(cm)),
+       recall = c(recall(confmat), recall(cm)),
+       F1 = c(f1_score(confmat), f1_score(cm)))
+
+```
+
+
+### ROC-AUC
+```{r}
+predicted <- predict(model, data_train, type = 'response')
+auc(roc(data_train$burnout, predicted))
+```
+
+Try to find ROC-AUC for the test dataset
+```{r}
+predicted <- predict(model, data_test, type = 'response')
+auc(roc(data_test$burnout, predicted))
+```
