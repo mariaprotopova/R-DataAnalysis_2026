@@ -28,3 +28,5 @@
 [Домашнее задание 6](https://forms.gle/2tsbAN4s96TjUTJk7): 23.02.2026, 23:59
 
 [Финальный проект](https://forms.gle/dvnQjdytxmykGAs67): 02.03.2026, 23:59
+
+[Домашнее задание 7 (опциональное)](https://forms.gle/e2z1ucAk2idutNMB9): 28.04.2026, 23:59
